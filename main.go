@@ -1,3 +1,4 @@
+//gist-fs exposes gists through a filesystem
 package main
 
 import (
