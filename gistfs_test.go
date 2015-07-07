@@ -11,17 +11,21 @@ import (
 	"github.com/hanwen/go-fuse/fuse/nodefs"
 )
 
-const ret = `
+const api = `
 [{
 	"url": "foo",
 	"id": "123abc",
 	"files": {
 		"file1": {
 			"raw_url": "%s/raw/123abc",
-			"size": 123
+			"size": 123,
+			"filename": "file1"
 		}
 	}
 }]`
+
+const gist = `Hey there
+Yo man`
 
 func TestGistFs(t *testing.T) {
 	root := NewGistFs("")
@@ -60,8 +64,13 @@ func TestGistFs(t *testing.T) {
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, ret, r.Host)
+		switch r.URL.Path {
+		case "/raw/123abc":
+			fmt.Fprintln(w, gist)
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, api, r.Host)
+		}
 	}))
 	defer ts.Close()
 
@@ -75,4 +84,26 @@ func TestGistFs(t *testing.T) {
 	if len(dirs) != 1 {
 		t.Errorf("Wrong number of listings returned. %d, should be 1", len(dirs))
 	}
+
+	if dirs[0].Name() != "file1" {
+		t.Fatalf("Wrong name. %s", dirs[0].Name())
+	}
+
+	// fi, err := os.Stat(mount + "/andrewstuart/file1")
+	// if err != nil {
+	// 	t.Fatalf("Errorf statting file: %v", err)
+	// }
+
+	// if fi.Size() != int64(123) {
+	// 	t.Fatalf("Wrong file size: %d, not 123", fi.Size())
+	// }
+
+	// text, err := ioutil.ReadFile(mount + "/andrewstuart/file1")
+	// if err != nil {
+	// 	t.Fatalf("Error reading file: %v", err)
+	// }
+
+	// if string(text) != gist {
+	// 	t.Errorf("Wrong text returned: %s", string(text))
+	// }
 }
